@@ -1,0 +1,125 @@
+from __future__ import division, print_function
+import numpy as np
+from keras.models import Model
+from keras.layers import Input, LSTM, Dense, TimeDistributed, Conv1D, GlobalAveragePooling1D, GlobalMaxPooling1D, 
+RepeatVector
+from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras_radam imprt RAdam
+from contextlib import redirect_stdout
+
+class SequenceToSequenceModel(object):
+
+    def __init__(self, sequence_length, input_dim, output_dim, lstm_units, dense_units):
+        self.sequence_length=sequence_length
+        self.input_dim=input_dim
+        self.output_dim=output_dim
+        self.lstm_units=lstm_units
+        self.dense_units=dense_units
+
+        self.model=self.build_sequence_to_sequence_model(self.sequence_length,self.input_dim,
+        self.output_dim,self.lstm_units,
+        self.dense_units)
+
+        def build_sequence_to_sequence_model(self,sequence_length, input_dim, output_dim, lstm_units, dense_units):
+            'build the encoder network'
+
+            encoder_inputs=Input(shape=(sequence_length,input_dim),name='encoder_inputs')
+            '''Specifying the input shape
+           
+            #output of this layer is (None, 1, 21)
+
+            encoder_conv=Conv1D(100,(1,),activation='relu')(encoder_inputs)
+        
+            #input to GAP is (None,1,100) and the output is (None,100); note that the output of GAP is 2D and of Conv is 3D
+            encoder_pool=GlobalAveragePooling1D()(encoder_conv)
+
+            encoder_repeat=RepeatVector(1)(encoder_pool)
+          
+            encoder_conv1=Conv1D(1024,(1),activation='tanh')(encoder_repeat)
+            
+            encoder_pool1=GlobalMaxPooling1D()(encoder_pool1)
+
+            encoder_repeat1=RepeatVector(1)(encoder_pool1)
+            
+            encoder_conv2=Conv1D(1024,(1),activation='relu')(encoder_repeat1)
+            
+            encoder_conv2=Conv1D(1024,(1,), activation='relu')(encoder_conv2)
+
+            encoder = Conv1D(1024 , (1 ,) , activation='tanh')(encoder_conv2)
+
+            encoder = Conv1D(139 , (1 ,) , activation='tanh')(encoder)
+
+            encoder_1 = LSTM(output_dim , return_state=True , return_sequences=True , dropout=0.2 ,
+                             recurrent_dropout=0.1)
+
+            encoder_2 = LSTM(output_dim , return_state=True , return_sequences=True , dropout=0.2 ,
+                             recurrent_dropout=0.1)
+
+            encoder_3 = LSTM(output_dim , return_state=True , return_sequences=True)
+            encoder_outputs , state_h , state_c = encoder_3(encoder_2(encoder_1(encoder)))
+            encoder_states = [ state_h , state_c ]
+
+            decoder_lstm=LSTM(output_dim, return_state=True,return_sequences=True,dropout=0.2, recurrent_dropout=0.1)
+            (encoder_outputs, initial_state=encoder_states)
+
+            decoder_lstm1=LSTM(output_dim,return_sequences=True,return_state=True,dropout=0.2,recurrent_dropout=0.1)
+            (decoder_lstm)
+
+            decoder_lstm2=LSTM(output_dim,return_sequences=True,return_state=True,dropout=0.2,recurrent_dropout=0.1)
+            (decoder_lstm1)
+
+            decoder_outputs=LSTM(output_dim,return_sequences=True, return_state=False)(decoder_lstm2)
+
+            #time distributed outputs aka LSTM dense layers; the input to these layers is (None,1,1024) and the output is
+            #(None,1,1024)
+
+            decoder_outputs_t1=TimeDistributed(Dense(dense_units,activation='tanh'))(decoder_outputs)
+
+            decoder_outputs_t2 = TimeDistributed(Dense(dense_units , activation='tanh'))(decoder_outputs_t1)
+
+            decoder_outputs_t3=TimeDistributed(Dense(dense_units,activation='tanh'))(decoder_outputs_t2)
+
+            model=Model(encoder_inputs,decoder_outputs_t3)
+
+            with open('model_summary.txt','w') as f:
+                with redirect_stdout(f):
+                    model.summary()
+                return model
+
+        def train(self,input_data,target,valid_input,valid_target,batch_size=100, epoch=1):
+            self.model.compile(optimizer=RAdam(),loss='mean_absolute_percentage_error')
+            self.model.fit(input_data,target,batch_size=batch_size,epochs=70,shuffle=True)
+          
+            self.model.compile(optimizer=RAdam(), loss='mean_squared_logarithmic_error')
+            checkpointer = ModelCheckpoint(filepath="savedmodels/checkpoint/model.h5",
+                                       verbose=0,
+                                       save_best_only=True)
+
+            tensorboard = TensorBoard(log_dir='./logs',
+                                  histogram_freq=0,
+                                  write_graph=True,
+                                  write_images=True)
+        print("******* NETWORK SUMMARY *******")
+            self.model.summary()
+        # Epochs
+            print("******* NETWORK SUMMARY *******")
+            history_mean = self.model.fit(input_data,
+                                      target,
+                                      batch_size=batch_size,
+                                      epochs=100, shuffle=False,
+                                      validation_data=(valid_input, valid_target),
+                                      callbacks=[checkpointer, tensorboard]).history
+        return history_mean
+
+    def predict(self, input_data):
+        """Predict output signal with input_data"""
+        return self.model.predict(input_data)
+       
+
+    def save_model(self, model_name):
+        """Save model"""
+        self.model.save_weights(model_name)
+
+    def load_model(self, model_name):
+        """Load model"""
+        self.model.load_weights(model_name)
